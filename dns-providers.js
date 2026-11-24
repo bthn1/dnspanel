@@ -43,10 +43,10 @@
     if (keyLabel) keyLabel.textContent = p.id === 'nextdns' ? 'NextDNS API Anahtarı' : p.id === 'other' ? 'Özel DoH adresi / DNS bilgisi' : p.auth === 'none' ? 'Bu sağlayıcı için API anahtarı gerekmez' : 'Sağlayıcı kimlik bilgileri (adaptör etkinleştirildiğinde)';
     if (keyInput) {
       keyInput.placeholder = p.id === 'nextdns' ? 'NextDNS API anahtarınızı yapıştırın...' : p.id === 'other' ? 'https://dns.example/dns-query veya DNS IP' : 'Bu sağlayıcının bağlantısı henüz etkin değil';
-      keyInput.disabled = p.id !== 'nextdns';
-      keyInput.value = p.id === 'nextdns' ? keyInput.value : '';
+      keyInput.disabled = !(p.id === 'nextdns' || p.id === 'other');
+      if (p.id !== 'nextdns' && p.id !== 'other') keyInput.value = '';
     }
-    loginBtn.textContent = p.id === 'nextdns' ? 'NextDNS hesabına bağlan' : p.status === 'resolver-ready' ? 'Resolver profilini görüntüle' : 'Sağlayıcı adaptörü gerekli';
+    loginBtn.textContent = p.id === 'nextdns' ? 'NextDNS hesabına bağlan' : (p.status === 'resolver-ready' || p.id === 'other') ? 'Resolver profilini kaydet' : 'Sağlayıcı adaptörü gerekli';
     loginBtn.disabled = p.status === 'adapter-required' || p.status === 'enterprise';
     loginBtn.classList.toggle('opacity-50', loginBtn.disabled);
     document.getElementById('readonly-stats-btn')?.toggleAttribute('disabled', p.id !== 'nextdns');
@@ -69,8 +69,17 @@
       event.preventDefault();
       event.stopImmediatePropagation();
       const info = document.getElementById('dns-provider-info');
-      if (p.status === 'resolver-ready') {
-        info.insertAdjacentHTML('beforeend', '<p class="mt-3 text-emerald-300">Resolver profili seçildi. Sistem DNS ayarlarına uygulama ve cihaz kurulum sihirbazı sonraki aşamada eklenecek.</p>');
+      if (p.status === 'resolver-ready' || p.id === 'other') {
+        const entered = document.getElementById('api-key-input')?.value.trim() || '';
+        if (p.id === 'other' && !/^(https?:\\/\\/|[a-zA-Z0-9.-]+$)/.test(entered)) {
+          info.insertAdjacentHTML('beforeend', '<p class="mt-3 text-amber-300">Geçerli bir DoH URL’si veya DNS sunucu adresi gir.</p>');
+          return;
+        }
+        const profile = { provider:p.id, name:p.name, doh:p.doh || (entered.startsWith('http') ? entered : ''), address:p.id === 'other' && !entered.startsWith('http') ? entered : '', savedAt:new Date().toISOString() };
+        const saved = JSON.parse(localStorage.getItem('dnspro_resolver_profiles') || '[]').filter(x => x.provider !== p.id || p.id !== 'other');
+        saved.push(profile);
+        localStorage.setItem('dnspro_resolver_profiles', JSON.stringify(saved));
+        info.insertAdjacentHTML('beforeend', '<p class="mt-3 text-emerald-300">Resolver profili bu tarayıcıya kaydedildi. DNS ayarlarına otomatik uygulanmadı; cihaz kurulum adımı ayrıca yapılmalı.</p>');
       }
     }, true);
     render();
