@@ -52,6 +52,8 @@
     document.getElementById('readonly-stats-btn')?.toggleAttribute('disabled', p.id !== 'nextdns');
     document.getElementById('readonly-profile-id')?.toggleAttribute('disabled', p.id !== 'nextdns');
     document.getElementById('nextdns-account-link')?.classList.toggle('hidden', p.id !== 'nextdns');
+    document.getElementById('login-saved-profiles-section')?.classList.toggle('hidden', p.id !== 'nextdns' || !JSON.parse(localStorage.getItem('nextdns_profiles') || '[]').length);
+    document.getElementById('login-manage-profiles-btn')?.classList.toggle('hidden', p.id !== 'nextdns');
   }
 
   function init() {
