@@ -26,6 +26,7 @@
 
   function render() {
     const select = document.getElementById('dns-provider-select');
+    const dashboardSelect = document.getElementById('dns-provider-dashboard-select');
     const info = document.getElementById('dns-provider-info');
     const badge = document.getElementById('dns-provider-badge');
     const keyLabel = document.querySelector('label[for="api-key-input"]');
@@ -34,6 +35,10 @@
     if (!select || !info || !loginBtn) return;
     select.innerHTML = providers.map(p => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
     select.value = state.selected;
+    if (dashboardSelect) {
+      dashboardSelect.innerHTML = select.innerHTML;
+      dashboardSelect.value = state.selected;
+    }
     const p = byId(state.selected);
     info.innerHTML = '<div class="font-semibold text-zinc-200 mb-1">' + esc(p.name) + '</div><p>' + esc(p.note) + '</p>' +
       (p.doh ? '<p class="mt-2 break-all text-blue-300">DoH: ' + esc(p.doh) + '</p>' : '') +
@@ -59,11 +64,15 @@
   function init() {
     const select = document.getElementById('dns-provider-select');
     if (!select) return;
-    select.addEventListener('change', () => {
-      state.selected = select.value;
+    const changeProvider = value => {
+      state.selected = value;
       localStorage.setItem('dnspro_provider', state.selected);
       render();
-    });
+      document.getElementById('dashboard-screen')?.classList.add('hidden');
+      document.getElementById('login-screen')?.classList.remove('hidden');
+    };
+    select.addEventListener('change', () => changeProvider(select.value));
+    document.getElementById('dns-provider-dashboard-select')?.addEventListener('change', event => changeProvider(event.target.value));
     const button = document.getElementById('login-btn');
     button?.addEventListener('click', event => {
       const p = byId(state.selected);
