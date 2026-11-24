@@ -71,7 +71,7 @@
       const info = document.getElementById('dns-provider-info');
       if (p.status === 'resolver-ready' || p.id === 'other') {
         const entered = document.getElementById('api-key-input')?.value.trim() || '';
-        if (p.id === 'other' && !/^(https?:\\/\\/|[a-zA-Z0-9.-]+$)/.test(entered)) {
+        if (p.id === 'other' && !(entered.startsWith('https://') || entered.startsWith('http://') || /^[a-zA-Z0-9.-]+$/.test(entered))) {
           info.insertAdjacentHTML('beforeend', '<p class="mt-3 text-amber-300">Geçerli bir DoH URL’si veya DNS sunucu adresi gir.</p>');
           return;
         }
