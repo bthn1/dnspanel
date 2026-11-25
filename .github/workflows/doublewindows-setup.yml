@@ -46,15 +46,29 @@ jobs:
           pyinstaller --noconfirm --clean --onefile --windowed --name DoubleWindows app.py
 
       - name: Install Inno Setup
-        run: choco install innosetup --yes --no-progress
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Chocolatey returned a non-zero code; checking whether Inno Setup is already installed."
+          }
 
       - name: Build installer
         working-directory: DoubleWindows
         shell: pwsh
         run: |
-          $iscc = "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe"
-          if (!(Test-Path $iscc)) { $iscc = "$env:ProgramFiles\Inno Setup 6\ISCC.exe" }
-          if (!(Test-Path $iscc)) { throw "Inno Setup compiler not found" }
+          $candidates = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+            "$env:ChocolateyInstall\lib\innosetup\tools\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $iscc) {
+            $found = Get-ChildItem -Path "$env:ProgramFiles(x86)","$env:ProgramFiles","$env:ChocolateyInstall\lib" -Filter ISCC.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $iscc = $found.FullName }
+          }
+          if (-not $iscc) { throw "Inno Setup compiler (ISCC.exe) not found. Checked standard installation paths." }
+          Write-Host "Using Inno Setup compiler: $iscc"
           New-Item -ItemType Directory -Force -Path output | Out-Null
           & $iscc "/DArch=${{ matrix.arch }}" installer.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
