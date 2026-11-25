@@ -44,7 +44,8 @@ jobs:
       - name: Build application
         working-directory: DoubleWindows
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name DoubleWindows app.py
+          python -c "import keyboard, pystray; from PIL import Image; print('Dependencies OK')"
+          pyinstaller --noconfirm --clean --onefile --windowed --name DoubleWindows --hidden-import=keyboard --collect-all keyboard --collect-all pystray --collect-all PIL app.py
 
       - name: Install Inno Setup
         shell: pwsh
