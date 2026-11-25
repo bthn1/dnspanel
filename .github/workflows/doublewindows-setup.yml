@@ -1,0 +1,68 @@
+name: Build DoubleWindows Setup
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "DoubleWindows/**"
+      - ".github/workflows/doublewindows-setup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} installer
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            python-arch: x64
+          - arch: x86
+            python-arch: x86
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: ${{ matrix.python-arch }}
+
+      - name: Install dependencies
+        working-directory: DoubleWindows
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build application
+        working-directory: DoubleWindows
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name DoubleWindows app.py
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        working-directory: DoubleWindows
+        shell: pwsh
+        run: |
+          $iscc = "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { $iscc = "$env:ProgramFiles\Inno Setup 6\ISCC.exe" }
+          if (!(Test-Path $iscc)) { throw "Inno Setup compiler not found" }
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+          & $iscc "/DArch=${{ matrix.arch }}" installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: DoubleWindows-Setup-${{ matrix.arch }}
+          path: DoubleWindows/output/DoubleWindows-Setup-${{ matrix.arch }}.exe
+          if-no-files-found: error
+          retention-days: 30
